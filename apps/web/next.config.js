@@ -37,9 +37,12 @@ const nextConfig = {
 
     return config;
   },
-  output: 'standalone',
+  output: 'export',
+  images: {
+    unoptimized: true
+  },
   poweredByHeader: false,
-  compress: true,
+  compress: true
 };
 
 module.exports = nextConfig; 

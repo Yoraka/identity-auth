@@ -25,7 +25,11 @@ export default function DashboardPage() {
       return;
     }
 
-    fetchUserInfo(token);
+    const getInfo = async () => {
+      await fetchUserInfo(token);
+    };
+
+    getInfo();
   }, [router]);
 
   const fetchUserInfo = async (token: string) => {

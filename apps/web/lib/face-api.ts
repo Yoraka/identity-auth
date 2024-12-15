@@ -1,6 +1,42 @@
 'use client';
 
-import * as faceapi from '@vladmandic/face-api';
+// 延迟导入 face-api
+let faceapi: typeof import('@vladmandic/face-api') | null = null;
+
+// 动态导入 face-api
+const loadFaceApi = async () => {
+  if (!faceapi) {
+    faceapi = await import('@vladmandic/face-api');
+  }
+  return faceapi;
+};
+
+// 检查是否在浏览器环境
+const isBrowser = typeof window !== 'undefined';
+
+// 添加更详细的类型定义
+interface IBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+}
+
+interface IFaceDetection {
+  box: IBox;
+  score: number;
+  landmarks?: any;
+}
+
+interface WithFaceLandmarks {
+  detection: IFaceDetection;
+  landmarks: any;
+  descriptor: Float32Array;
+}
 
 export class FaceCapture {
   private static video: HTMLVideoElement | null = null;
@@ -25,7 +61,7 @@ export class FaceCapture {
     }
 
     if (!support.webgl) {
-      throw new Error('您的浏览器不支持WebGL，人脸识别可能无法正常工作。');
+      throw new Error('您的浏览器不支持WebGL，人脸识别可能无法正常工作');
     }
 
     return true;
@@ -87,10 +123,11 @@ export class FaceCapture {
 
     try {
       this.checkBrowserSupport();
+      const api = await loadFaceApi();
 
       // 配置 TensorFlow
-      await faceapi.tf.setBackend('webgl');
-      await faceapi.tf.ready();
+      await api.tf.setBackend('webgl');
+      await api.tf.ready();
       
       console.log('TensorFlow 后端初始化成功: webgl');
       this.isBackendInitialized = true;
@@ -101,8 +138,8 @@ export class FaceCapture {
   }
 
   static {
-    // 应用启动时就开始加载模型
-    if (typeof window !== 'undefined') {
+    // 只在浏览器环境下预加载模型
+    if (isBrowser) {
       console.log('开始预加载人脸识别模型...');
       this.loadModels().catch(error => {
         console.warn('模型预加载失败，将在使用时重试:', error);
@@ -111,9 +148,11 @@ export class FaceCapture {
   }
 
   static async loadModels() {
+    if (!isBrowser) return;
     if (this.isModelLoaded) return;
 
     try {
+      const api = await loadFaceApi();
       await this.initializeBackend();
       
       // 使用 CDN 路径或本地路径
@@ -125,13 +164,13 @@ export class FaceCapture {
       // 按优先级顺序加载型
       try {
         // 首先加载检测模型，这是最重要的
-        console.log('加载人脸检测模型...');
-        const detectPromise = faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+        console.log('载人脸检测模型...');
+        const detectPromise = api.nets.ssdMobilenetv1.loadFromUri(modelPath);
         
         // 然后并行加载其他模型
         const [landmarkPromise, recognitionPromise] = [
-          faceapi.nets.faceLandmark68Net.loadFromUri(modelPath),
-          faceapi.nets.faceRecognitionNet.loadFromUri(modelPath)
+          api.nets.faceLandmark68Net.loadFromUri(modelPath),
+          api.nets.faceRecognitionNet.loadFromUri(modelPath)
         ];
 
         // 等待检测模型加载完成
@@ -199,7 +238,7 @@ export class FaceCapture {
           resolve();
         } else {
           this.video.onloadeddata = () => resolve();
-          this.video.onerror = () => reject(new Error('视频加载失败'));
+          this.video.onerror = () => reject(new Error('视频���载失败'));
         }
 
         // 设置超时
@@ -218,7 +257,7 @@ export class FaceCapture {
         } else if (error.name === 'NotFoundError') {
           throw new Error('未找到可用的摄像头设备。请确保摄像头已连接并且没有被其他应用程序占用。');
         } else if (error.name === 'NotReadableError') {
-          throw new Error('无法访问摄像头。可能是因为摄像头被其他应用程序占用，请关闭其他使用摄像头的应用后试。');
+          throw new Error('无法访问摄像头。可能是因为摄像头被其他应用程序占用，请关闭他使用摄像头的应用后试。');
         } else {
           throw new Error(`摄像头初始化失败: ${error.message}`);
         }
@@ -232,6 +271,7 @@ export class FaceCapture {
     if (!this.video) throw new Error('视频元素未初始化');
 
     try {
+      const api = await loadFaceApi();
       // 在检测之前确保视频已经有足够的帧
       const checkVideoReady = async () => {
         const canvas = document.createElement('canvas');
@@ -265,12 +305,12 @@ export class FaceCapture {
         }
       }
 
-      const options = new faceapi.SsdMobilenetv1Options({
+      const options = new api.SsdMobilenetv1Options({
         minConfidence: 0.4,
         maxResults: 1
       });
 
-      const detection = await faceapi
+      const detection = await api
         .detectSingleFace(this.video, options)
         .withFaceLandmarks()
         .withFaceDescriptor();
@@ -295,6 +335,11 @@ export class FaceCapture {
   }
 
   static async capture(showPreview = false): Promise<Float32Array> {
+    // 如果不在浏览器环境，抛出错误
+    if (!isBrowser) {
+      throw new Error('FaceCapture 只能在浏览器环境中使用');
+    }
+
     try {
       // 只在第一次初始化
       if (!this.isInitialized) {
@@ -351,6 +396,7 @@ export class FaceCapture {
 
         const ctx = this.canvas.getContext('2d');
         if (ctx) {
+          const api = await loadFaceApi();  // 加载 face-api
           // 绘制视频帧
           ctx.drawImage(this.video!, 0, 0);
 
@@ -371,12 +417,28 @@ export class FaceCapture {
           };
 
           // 绘人脸框
-          new faceapi.draw.DrawBox(detection.detection.box, drawOptions).draw(this.canvas);
+          new api.draw.DrawBox(detection.detection.box, drawOptions).draw(this.canvas);
           
           // 绘制人脸特征点
-          faceapi.draw.drawFaceLandmarks(this.canvas, detection as faceapi.WithFaceLandmarks<object>);
+          const box = {
+            ...detection.detection.box,
+            left: detection.detection.box.x,
+            top: detection.detection.box.y,
+            right: detection.detection.box.x + detection.detection.box.width,
+            bottom: detection.detection.box.y + detection.detection.box.height
+          };
 
-          // 减少预览时间
+          const faceLandmarks = {
+            ...detection,
+            detection: {
+              ...detection.detection,
+              box
+            }
+          };
+
+          api.draw.drawFaceLandmarks(this.canvas, faceLandmarks as WithFaceLandmarks);
+
+          // 少预览时间
           setTimeout(() => {
             this.cleanup();
           }, 2000); // 从3000ms减少到2000ms
@@ -421,6 +483,16 @@ export class FaceCapture {
   }
 
   static async compareFaces(face1: Float32Array, face2: Float32Array): Promise<number> {
-    return faceapi.euclideanDistance(face1, face2);
+    const api = await loadFaceApi();
+    return api.euclideanDistance(face1, face2);
   }
-} 
+}
+
+// 导出一个空的服务器端实现
+export const ServerFaceCapture = {
+  capture: () => Promise.reject(new Error('FaceCapture 不能在服务器端使用')),
+  loadModels: () => Promise.reject(new Error('FaceCapture 不能在服务器端使用')),
+};
+
+// 根据环境导出不同的实现
+export default isBrowser ? FaceCapture : ServerFaceCapture; 
