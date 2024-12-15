@@ -31,11 +31,11 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
+  server:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: identity_auth_api
+      dockerfile: apps/server/Dockerfile
+    container_name: identity_auth_server
     ports:
       - "3001:3001"
     environment:
@@ -59,7 +59,7 @@ services:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=http://localhost:3001
     depends_on:
-      - api
+      - server
 
 volumes:
   postgres_data:
