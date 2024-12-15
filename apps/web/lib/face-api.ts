@@ -26,16 +26,28 @@ interface IBox {
   y: number;
 }
 
+// 修改接口定义
+interface IFaceLandmarks {
+  positions: Point[];
+  shift: Point;
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
 interface IFaceDetection {
   box: IBox;
   score: number;
-  landmarks?: any;
+  landmarks?: IFaceLandmarks;
 }
 
-interface WithFaceLandmarks {
+interface WithFaceLandmarks<T = {}> {
   detection: IFaceDetection;
-  landmarks: any;
+  landmarks: IFaceLandmarks;
   descriptor: Float32Array;
+  withFaceDescriptor(): WithFaceLandmarks<T>;
 }
 
 export class FaceCapture {
@@ -164,7 +176,7 @@ export class FaceCapture {
       // 按优先级顺序加载型
       try {
         // 首先加载检测模型，这是最重要的
-        console.log('载人脸检测模型...');
+        console.log('人脸检测模型...');
         const detectPromise = api.nets.ssdMobilenetv1.loadFromUri(modelPath);
         
         // 然后并行加载其他模型
@@ -238,7 +250,7 @@ export class FaceCapture {
           resolve();
         } else {
           this.video.onloadeddata = () => resolve();
-          this.video.onerror = () => reject(new Error('视频���载失败'));
+          this.video.onerror = () => reject(new Error('视频加载失败'));
         }
 
         // 设置超时
@@ -400,7 +412,7 @@ export class FaceCapture {
           // 绘制视频帧
           ctx.drawImage(this.video!, 0, 0);
 
-          // 绘制人脸框和特征点
+          // 绘制人脸框和��征点
           const drawOptions = {
             label: '人脸',
             drawLines: true,
@@ -436,7 +448,7 @@ export class FaceCapture {
             }
           };
 
-          api.draw.drawFaceLandmarks(this.canvas, faceLandmarks as WithFaceLandmarks);
+          api.draw.drawFaceLandmarks(this.canvas, faceLandmarks as unknown as WithFaceLandmarks<{}>);
 
           // 少预览时间
           setTimeout(() => {
