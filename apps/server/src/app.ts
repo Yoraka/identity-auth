@@ -27,7 +27,7 @@ app.use(loggingMiddleware);
 app.use('/api/auth', authRouter);
 
 // 健康检查
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 

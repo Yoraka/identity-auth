@@ -15,7 +15,7 @@ COPY apps/server/package.json ./apps/server/
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # 安装类型定义
-RUN pnpm add -D @types/node @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/dotenv
+RUN pnpm add -D @types/node @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/dotenv @types/pg @types/redis
 
 # 然后复制其他源代码文件
 COPY . .
