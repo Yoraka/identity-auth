@@ -1,26 +1,40 @@
-FROM node:18-alpine AS builder
+FROM alibaba-cloud-linux-3-registry.cn-hangzhou.cr.aliyuncs.com/alinux3/node:20.16 AS builder
 
 WORKDIR /app
 
 # 安装 pnpm
+USER root
+RUN npm config set registry https://registry.npmmirror.com
 RUN npm install -g pnpm
 
-# 复制项目文件
+# 首先只复制 package.json 文件
+COPY package.json pnpm-lock.yaml ./
+COPY apps/server/package.json ./apps/server/
+
+# 安装依赖
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# 安装类型定义
+RUN pnpm add -D @types/node @types/express @types/cors @types/bcrypt @types/jsonwebtoken @types/dotenv
+
+# 然后复制其他源代码文件
 COPY . .
 
-# 安装依赖并构建
-RUN pnpm install
-RUN pnpm --filter api build
+# 构建应用
+RUN cd apps/server && tsc
 
 # 生产环境镜像
-FROM node:18-alpine
+FROM alibaba-cloud-linux-3-registry.cn-hangzhou.cr.aliyuncs.com/alinux3/node:20.16
 
 WORKDIR /app
 
-# 复制构建产物和必要文件
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json .
-COPY --from=builder /app/apps/api/node_modules ./node_modules
+# 复制必要的文件
+COPY --from=builder /app/apps/server/dist ./dist
+COPY --from=builder /app/apps/server/package.json ./package.json
+COPY --from=builder /app/apps/server/node_modules ./node_modules
+
+# 设置生产环境变量
+ENV NODE_ENV=production
 
 # 暴露端口
 EXPOSE 3001

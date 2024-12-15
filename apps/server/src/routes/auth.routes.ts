@@ -1,17 +1,31 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
-import { authMiddleware, rateLimitMiddleware } from '../middlewares/auth.middleware';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
+const authController = new AuthController();
 
 // 公开路由
-router.post('/register', rateLimitMiddleware, AuthController.register);
-router.post('/login', rateLimitMiddleware, AuthController.login);
+router.post('/register', async (req, res, next) => {
+  try {
+    await authController.register(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/login', async (req, res, next) => {
+  try {
+    await authController.login(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // 需要认证的路由
-router.get('/me', authMiddleware, AuthController.me);
-router.post('/logout', authMiddleware, AuthController.logout);
-router.post('/deactivate', authMiddleware, AuthController.deactivate);
-router.put('/face-features', authMiddleware, AuthController.updateFaceFeatures);
+router.get('/me', authMiddleware, authController.me);
+router.post('/logout', authMiddleware, authController.logout);
+router.post('/deactivate', authMiddleware, authController.deactivate);
+router.put('/face-features', authMiddleware, authController.updateFaceFeatures);
 
-export default router; 
+export const authRouter = router; 
