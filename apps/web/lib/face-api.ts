@@ -122,7 +122,7 @@ export class FaceCapture {
       
       console.log('正在加载模型，路径:', modelPath);
 
-      // 按优先级顺序加载���型
+      // 按优先级顺序加载型
       try {
         // 首先加载检测模型，这是最重要的
         console.log('加载人脸检测模型...');
@@ -374,7 +374,7 @@ export class FaceCapture {
           new faceapi.draw.DrawBox(detection.detection.box, drawOptions).draw(this.canvas);
           
           // 绘制人脸特征点
-          faceapi.draw.drawFaceLandmarks(this.canvas, detection as faceapi.WithFaceLandmarks<{}>);
+          faceapi.draw.drawFaceLandmarks(this.canvas, detection as faceapi.WithFaceLandmarks<object>);
 
           // 减少预览时间
           setTimeout(() => {

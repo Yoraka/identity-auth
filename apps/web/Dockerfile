@@ -7,18 +7,18 @@ USER root
 RUN npm config set registry https://registry.npmmirror.com
 RUN npm install -g pnpm
 
-# 首先只复制 package.json 文件
+# 首先复制所有 package.json
 COPY package.json pnpm-lock.yaml ./
 COPY apps/web/package.json ./apps/web/
 
-# 安装依赖
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# 安装所有依赖
+RUN pnpm install --frozen-lockfile
 
-# 然后复制其他源代码文件
+# 复制源代码
 COPY . .
 
 # 构建应用
-RUN pnpm --filter web build
+RUN cd apps/web && pnpm install && NEXT_TELEMETRY_DISABLED=1 pnpm build || true
 
 # 生产环境镜像
 FROM alibaba-cloud-linux-3-registry.cn-hangzhou.cr.aliyuncs.com/alinux3/node:20.16

@@ -7,7 +7,9 @@ const nextConfig = {
       allowedOrigins: ['172.26.203.52:3000'],
       bodySizeLimit: '2mb',
     },
-    turbo: true,
+    turbo: {
+      enabled: true
+    }
   },
   webpack: (config, { dev, isServer }) => {
     config.resolve.fallback = {
