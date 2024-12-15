@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config';
-import authRoutes from './routes/auth.routes';
+import { authRouter } from './routes/auth.routes';
 import { loggingMiddleware } from './middlewares/auth.middleware';
 import { UserModel } from './models/user.model';
 import { testDatabaseConnection } from './utils/db';
@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(loggingMiddleware);
 
 // 路由
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRouter);
 
 // 健康检查
 app.get('/api/health', (req, res) => {

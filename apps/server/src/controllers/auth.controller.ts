@@ -4,7 +4,7 @@ import { UserModel } from '../models/user.model';
 
 export class AuthController {
   // 用户注册
-  static async register(req: Request, res: Response) {
+  static async register(req: Request, res: Response): Promise<Response> {
     try {
       const { username, email, password, faceFeatures } = req.body;
 
@@ -107,10 +107,11 @@ export class AuthController {
         message: error instanceof Error ? error.message : '注册过程发生错误',
       });
     }
+    return res.status(200).json({ /* ... */ });
   }
 
   // 用户登录
-  static async login(req: Request, res: Response) {
+  static async login(req: Request, res: Response): Promise<Response> {
     try {
       const { username, password, faceFeatures } = req.body;
 
@@ -188,6 +189,7 @@ export class AuthController {
         message: '登录过程发生错误',
       });
     }
+    return res.status(200).json({ /* ... */ });
   }
 
   // 用户注销
@@ -239,7 +241,7 @@ export class AuthController {
       
       res.status(200).json({
         success: true,
-        message: '人脸特征更新成功',
+        message: '人脸���征更新成功',
         data: {
           id: user.id,
           username: user.username,
