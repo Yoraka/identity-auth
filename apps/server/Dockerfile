@@ -5,7 +5,7 @@ WORKDIR /app
 # 安装 pnpm
 USER root
 RUN npm config set registry https://registry.npmmirror.com
-RUN npm install -g pnpm
+RUN npm install -g pnpm typescript
 
 # 首先只复制 package.json 文件
 COPY package.json pnpm-lock.yaml ./
@@ -21,7 +21,7 @@ RUN pnpm add -D @types/node @types/express @types/cors @types/bcrypt @types/json
 COPY . .
 
 # 构建应用
-RUN cd apps/server && tsc
+RUN cd apps/server && ../node_modules/.bin/tsc
 
 # 生产环境镜像
 FROM alibaba-cloud-linux-3-registry.cn-hangzhou.cr.aliyuncs.com/alinux3/node:20.16
