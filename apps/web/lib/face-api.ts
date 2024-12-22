@@ -294,7 +294,6 @@ export class FaceCapture {
         canvas.height = this.video!.videoHeight;
         context.drawImage(this.video!, 0, 0);
         
-        // 检查画面是否完全黑色（摄像头可能还没有输出图像）
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         let hasContent = false;
@@ -308,26 +307,27 @@ export class FaceCapture {
         return hasContent;
       };
 
-      // 等待视频准备就绪
+      // 增加等待时间
       let ready = false;
-      for (let i = 0; i < 10 && !ready; i++) {
+      for (let i = 0; i < 20 && !ready; i++) { // 增加到20次尝试
         ready = await checkVideoReady();
         if (!ready) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200)); // 增加等待时间
         }
       }
 
       const options = new api.SsdMobilenetv1Options({
-        minConfidence: 0.4,
+        minConfidence: 0.3, // 降低置信度阈值
         maxResults: 1
       });
 
-      const detection = await api
-        .detectSingleFace(this.video, options)
+      // 修改检测方法的调用
+      const detection = await api.detectSingleFace(this.video, options)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
       if (!detection) {
+        console.warn('未检测到人脸，重试中...');
         throw new Error('未检测到人脸，请确保光线充足且正面对着摄像头');
       }
 
@@ -347,28 +347,23 @@ export class FaceCapture {
   }
 
   static async capture(showPreview = false): Promise<Float32Array> {
-    // 如果不在浏览器环境，抛出错误
     if (!isBrowser) {
       throw new Error('FaceCapture 只能在浏览器环境中使用');
     }
 
     try {
-      // 只在第一次初始化
       if (!this.isInitialized) {
         await this.initialize();
-        // 减少预热时间
-        await new Promise(resolve => setTimeout(resolve, 500)); // 从1000ms减少到500ms
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 增加预热时间
       }
 
-      // 优化人脸检测尝试
       let detection = null;
-      let attempts = 3;
+      let attempts = 5; // 增加尝试次数
       
       while (attempts > 0 && !detection) {
         try {
-          // 减少每次尝试之间的等待时间
-          if (attempts < 3) {
-            await new Promise(resolve => setTimeout(resolve, 200)); // 从500ms减少到200ms
+          if (attempts < 5) {
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
           
           detection = await this.detectFace();
@@ -382,15 +377,12 @@ export class FaceCapture {
         }
       }
 
-      // 确保 detection 不为 null
       if (!detection) {
         throw new Error('未能成功检测到人脸');
       }
 
-      // 获取人脸特征
       const faceDescriptor = detection.descriptor;
 
-      // 如果需要预览，创建预览画布
       if (showPreview) {
         if (!this.canvas) {
           this.canvas = document.createElement('canvas');
@@ -408,52 +400,24 @@ export class FaceCapture {
 
         const ctx = this.canvas.getContext('2d');
         if (ctx) {
-          const api = await loadFaceApi();  // 加载 face-api
-          // 绘制视频帧
+          const api = await loadFaceApi();
           ctx.drawImage(this.video!, 0, 0);
 
-          // 绘制人脸框和��征点
-          const drawOptions = {
+          // 修改绘制部分
+          const drawBox = new api.draw.DrawBox(detection.detection.box, {
             label: '人脸',
-            drawLines: true,
             lineWidth: 2,
-            boxColor: 'blue',
-            lineColor: 'blue',
-            drawLabelOptions: {
-              anchorPosition: 'TOP_LEFT' as const,
-              backgroundColor: 'rgba(0, 0, 255, 0.5)',
-              fontColor: 'white',
-              fontSize: 16,
-              padding: 5
-            }
-          };
-
-          // 绘人脸框
-          new api.draw.DrawBox(detection.detection.box, drawOptions).draw(this.canvas);
+            boxColor: 'blue'
+          });
           
-          // 绘制人脸特征点
-          const box = {
-            ...detection.detection.box,
-            left: detection.detection.box.x,
-            top: detection.detection.box.y,
-            right: detection.detection.box.x + detection.detection.box.width,
-            bottom: detection.detection.box.y + detection.detection.box.height
-          };
+          drawBox.draw(this.canvas);
+          
+          // 使用 detection 作为参数
+          api.draw.drawFaceLandmarks(this.canvas, detection);
 
-          const faceLandmarks = {
-            ...detection,
-            detection: {
-              ...detection.detection,
-              box
-            }
-          };
-
-          api.draw.drawFaceLandmarks(this.canvas, faceLandmarks as unknown as WithFaceLandmarks<{}>);
-
-          // 少预览时间
           setTimeout(() => {
             this.cleanup();
-          }, 2000); // 从3000ms减少到2000ms
+          }, 5000);
         }
       } else {
         this.cleanup();
